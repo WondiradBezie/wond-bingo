@@ -36,12 +36,13 @@
         .btn-bingo { background: #ff416c; color: white; }
         .btn-bingo:hover { background: #ff4b2b; }
         .btn-bingo:disabled { background: #ccc; cursor: not-allowed; }
-        .login-prompt { text-align: center; padding: 40px; background: #f8f9fa; border-radius: 10px; margin: 20px 0; }
+        .login-prompt { text-align: center; padding: 40px; background: #f8f9fa; border-radius: 10px; margin: 20px 0; display: none; }
         .login-prompt a { color: #ff416c; font-weight: bold; text-decoration: none; }
         .login-prompt a:hover { text-decoration: underline; }
         .alert { padding: 10px; margin: 10px 0; border-radius: 5px; text-align: center; display: none; }
         .alert-success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
         .alert-danger { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .game-content { display: block; }
     </style>
 </head>
 <body>
@@ -72,13 +73,14 @@
         <div id="alertMessage" class="alert"></div>
 
         <!-- Login Prompt (shown when not logged in) -->
-        <div id="loginPrompt" class="login-prompt" style="display: none;">
+        <div id="loginPrompt" class="login-prompt">
             <h3>🔒 Please Login to Play</h3>
             <p>You need to <a href="/login">login</a> or <a href="/register">register</a> to select cards and join games.</p>
+            <p style="margin-top: 10px;">Demo: <strong>admin</strong> / <strong>admin123</strong></p>
         </div>
 
         <!-- Game Content (shown when logged in) -->
-        <div id="gameContent">
+        <div id="gameContent" class="game-content">
             <h3>Select Card (1-400)</h3>
             <div class="cards-grid" id="cardsGrid"></div>
 
@@ -119,10 +121,10 @@
         let calledNumbers = [];
         let timer = 20;
         let isLoggedIn = false;
-        let isAdmin = false;
-        let username = '';
 
-        // Check login status on page load
+        // ============================================
+        // FIXED: Check login status on page load
+        // ============================================
         function checkLoginStatus() {
             fetch('/api/balance')
                 .then(response => {
@@ -133,20 +135,25 @@
                     }
                 })
                 .then(data => {
-                    // User is logged in
+                    // User IS logged in
+                    console.log("✅ User is logged in");
                     isLoggedIn = true;
+                    
+                    // Show game content, hide login prompt
                     document.getElementById('loginPrompt').style.display = 'none';
                     document.getElementById('gameContent').style.display = 'block';
+                    
+                    // Update auth links
                     document.getElementById('loginLink').style.display = 'none';
                     document.getElementById('registerLink').style.display = 'none';
                     document.getElementById('profileLink').style.display = 'inline';
                     document.getElementById('logoutLink').style.display = 'inline';
                     
-                    // Check if admin (username is admin)
+                    // Check if admin
                     fetch('/profile')
                         .then(response => response.text())
                         .then(html => {
-                            if (html.includes('admin')) {
+                            if (html.includes('admin') || html.includes('Admin')) {
                                 document.getElementById('adminLink').style.display = 'inline';
                             }
                         });
@@ -154,10 +161,15 @@
                     showAlert('✅ Logged in successfully!', 'success');
                 })
                 .catch(error => {
-                    // User is not logged in
+                    // User is NOT logged in
+                    console.log("❌ User is not logged in");
                     isLoggedIn = false;
+                    
+                    // Show login prompt, hide game content
                     document.getElementById('loginPrompt').style.display = 'block';
                     document.getElementById('gameContent').style.display = 'none';
+                    
+                    // Update auth links
                     document.getElementById('loginLink').style.display = 'inline';
                     document.getElementById('registerLink').style.display = 'inline';
                     document.getElementById('profileLink').style.display = 'none';
@@ -241,9 +253,6 @@
         function selectCard(num) {
             if(!isLoggedIn) {
                 showAlert('Please login first!', 'danger');
-                setTimeout(() => {
-                    window.location.href = '/login';
-                }, 2000);
                 return;
             }
             
@@ -261,13 +270,13 @@
             selectedCard = num;
             socket.emit('select_card', { cardNumber: num, userId: currentUser });
             updateCardsLeft();
+            showAlert(`Card ${num} selected!`, 'success');
         }
 
         // Select random card
         function selectRandomCard() {
             if(!isLoggedIn) {
                 showAlert('Please login first!', 'danger');
-                window.location.href = '/login';
                 return;
             }
             
@@ -288,7 +297,6 @@
         function joinGame() {
             if(!isLoggedIn) {
                 showAlert('Please login first!', 'danger');
-                window.location.href = '/login';
                 return;
             }
             
@@ -377,11 +385,10 @@
             $('#roundNum').text(Math.floor(Math.random() * 5) + 1);
         }, 5000);
 
-        // Check login status every 30 seconds
-        setInterval(checkLoginStatus, 30000);
-
-        // Initial check
-        checkLoginStatus();
+        // Check login status on page load and every time page loads
+        $(document).ready(function() {
+            checkLoginStatus();
+        });
     </script>
 </body>
 </html>
