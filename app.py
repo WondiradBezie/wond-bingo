@@ -60,6 +60,7 @@ class BingoGame:
         self.round_number = 1
         self.stop_drawing = False
         self.draw_thread = None
+        self.round_start_time = time.time()
         self.start_draw_thread()
         
     def start_draw_thread(self):
@@ -77,6 +78,7 @@ class BingoGame:
                 number = self.draw_number()
                 if number:
                     self.socketio.emit('number_drawn', {'number': number})
+                    print(f"🎲 Number drawn: {number}")
     
     def generate_card(self):
         """Generate a random bingo card"""
@@ -125,7 +127,19 @@ class BingoGame:
             self.drawn_numbers = []
             self.pending_winners = []
             self.game_running = True
-            print(f"Started new round #{self.round_number}")
+            # Reset timer for new round
+            self.round_start_time = time.time()
+            print(f"✅ Started new round #{self.round_number}")
+            # Broadcast to all clients that new round started
+            self.socketio.emit('round_started', {'round': self.round_number})
+    
+    def get_round_time_left(self):
+        """Get seconds left in current round"""
+        if not hasattr(self, 'round_start_time'):
+            return 20
+        elapsed = time.time() - self.round_start_time
+        left = max(0, 20 - int(elapsed))
+        return left
     
     def add_player(self, user_id, card_number=None):
         """Add a player to the game"""
@@ -160,6 +174,7 @@ class BingoGame:
             available = set(range(1, 76)) - set(self.drawn_numbers)
             if not available:
                 self.game_running = False
+                print("🎯 No more numbers - round ended")
                 return None
             
             number = random.choice(list(available))
@@ -191,10 +206,12 @@ class BingoGame:
                 self.pending_winners.append(user_id)
                 player.claim_time = datetime.utcnow()
                 db.session.commit()
+                print(f"🏆 Player {user_id} won round #{self.round_number}")
                 return 'VALID'
             else:
                 player.disqualified = True
                 db.session.commit()
+                print(f"❌ Player {user_id} disqualified - false claim")
                 return 'DISQUALIFIED'
 
 # ============================================
@@ -270,10 +287,13 @@ def logout():
 def profile():
     return render_template('profile.html', user=current_user)
 
+# ============================================
+# FIXED: API route for balance check
+# ============================================
 @app.route('/api/balance')
 @login_required
 def get_balance():
-    return jsonify({'balance': 100})  # Default balance for demo
+    return jsonify({'balance': 100, 'username': current_user.username})
 
 @app.route('/api/join_game', methods=['POST'])
 @login_required
@@ -341,7 +361,8 @@ def handle_get_state():
         'card': json.loads(player.card) if player else None,
         'in_game': player is not None,
         'disqualified': player.disqualified if player else False,
-        'winners': game_engine.pending_winners
+        'winners': game_engine.pending_winners,
+        'time_left': game_engine.get_round_time_left()
     })
 
 # ============================================
