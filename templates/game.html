@@ -4,31 +4,29 @@
     <title>Wond Bingo</title>
     <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: Arial; }
         body { background: linear-gradient(135deg, #1a2a3a, #0f1a24); min-height: 100vh; padding: 20px; }
         .container { max-width: 1200px; margin: 0 auto; background: white; border-radius: 20px; padding: 20px; position: relative; }
         .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
         .header h1 { color: #ff416c; }
-        .timer { background: #1a2a3a; color: #ffd700; padding: 10px 20px; border-radius: 10px; font-size: 24px; }
-        .stats { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 20px; }
-        .stat { background: #667eea; color: white; padding: 10px; border-radius: 10px; text-align: center; }
+        .timer { background: #1a2a3a; color: #ffd700; padding: 10px 20px; border-radius: 10px; font-size: 24px; font-weight: bold; }
         .auth-links { position: absolute; top: 20px; right: 20px; display: flex; gap: 10px; }
-        .auth-links a { color: white; background: #ff416c; padding: 5px 10px; border-radius: 5px; text-decoration: none; font-size: 14px; }
-        .auth-links a:hover { background: #ff4b2b; }
-        .cards-grid { display: grid; grid-template-columns: repeat(20, 1fr); gap: 3px; max-height: 300px; overflow-y: auto; margin-bottom: 20px; background: #f0f0f0; padding: 10px; border-radius: 10px; }
+        .auth-links a { color: white; background: #ff416c; padding: 5px 10px; border-radius: 5px; text-decoration: none; }
+        .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }
+        .stat { background: #667eea; color: white; padding: 10px; border-radius: 10px; text-align: center; }
+        .cards-grid { display: grid; grid-template-columns: repeat(20, 1fr); gap: 3px; max-height: 300px; overflow-y: auto; margin: 20px 0; background: #f0f0f0; padding: 10px; border-radius: 10px; }
         .card-number { aspect-ratio: 1; background: white; border: 1px solid #ddd; display: flex; align-items: center; justify-content: center; font-size: 12px; cursor: pointer; border-radius: 3px; }
         .card-number.available:hover { background: #4CAF50; color: white; }
-        .card-number.selected-by-me { background: #4CAF50 !important; color: white !important; border-color: #4CAF50; }
-        .card-number.selected-by-other { background: #ff4444 !important; color: white !important; border-color: #ff4444; cursor: not-allowed; }
+        .card-number.selected-by-me { background: #4CAF50 !important; color: white !important; }
+        .card-number.selected-by-other { background: #ff4444 !important; color: white !important; cursor: not-allowed; }
         .bingo-card { display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px; margin: 20px 0; }
         .bingo-cell { aspect-ratio: 1; background: white; border: 2px solid #ddd; display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: bold; border-radius: 5px; }
-        .bingo-cell.called { background: #4CAF50; color: white; border-color: #4CAF50; }
-        .bingo-cell.free { background: #ffd700; border-color: #ffd700; }
-        .called-numbers { background: #1a2a3a; padding: 15px; border-radius: 10px; margin: 20px 0; }
+        .bingo-cell.called { background: #4CAF50; color: white; }
+        .bingo-cell.free { background: #ffd700; }
+        .called-numbers { background: #1a2a3a; padding: 15px; border-radius: 10px; margin: 20px 0; min-height: 100px; }
         .called-numbers h3 { color: white; margin-bottom: 10px; }
-        .called-number { display: inline-block; width: 40px; height: 40px; background: #333; color: white; border-radius: 50%; text-align: center; line-height: 40px; margin: 5px; font-weight: bold; border: 2px solid #ffd700; }
+        .called-number { display: inline-block; width: 40px; height: 40px; background: #333; color: white; border-radius: 50%; text-align: center; line-height: 40px; margin: 5px; border: 2px solid #ffd700; font-weight: bold; }
         .controls { display: flex; gap: 10px; justify-content: center; margin-top: 20px; }
         button { padding: 15px 30px; font-size: 18px; border: none; border-radius: 10px; cursor: pointer; font-weight: bold; }
         .btn-primary { background: #4CAF50; color: white; }
@@ -36,19 +34,16 @@
         .btn-bingo { background: #ff416c; color: white; }
         .btn-bingo:hover { background: #ff4b2b; }
         .btn-bingo:disabled { background: #ccc; cursor: not-allowed; }
-        .login-prompt { text-align: center; padding: 40px; background: #f8f9fa; border-radius: 10px; margin: 20px 0; display: none; }
-        .login-prompt a { color: #ff416c; font-weight: bold; text-decoration: none; }
-        .login-prompt a:hover { text-decoration: underline; }
-        .alert { padding: 10px; margin: 10px 0; border-radius: 5px; text-align: center; display: none; }
-        .alert-success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
-        .alert-danger { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
-        .game-content { display: block; }
+        .login-prompt { text-align: center; padding: 40px; background: #f8f9fa; border-radius: 10px; margin: 20px 0; }
+        .game-status { text-align: center; padding: 10px; margin: 10px 0; border-radius: 5px; font-weight: bold; }
+        .status-waiting { background: #fff3cd; color: #856404; }
+        .status-running { background: #d4edda; color: #155724; }
     </style>
 </head>
 <body>
     <div class="container">
         <!-- Auth Links -->
-        <div class="auth-links" id="authLinks">
+        <div class="auth-links">
             <a href="/login" id="loginLink">Login</a>
             <a href="/register" id="registerLink">Register</a>
             <a href="/profile" id="profileLink" style="display: none;">Profile</a>
@@ -64,23 +59,24 @@
 
         <!-- Stats -->
         <div class="stats">
-            <div class="stat">Players: <span id="playerCount">0</span></div>
             <div class="stat">Round: <span id="roundNum">1</span></div>
             <div class="stat">Cards Left: <span id="cardsLeft">400</span></div>
         </div>
 
-        <!-- Alert Message -->
-        <div id="alertMessage" class="alert"></div>
+        <!-- Game Status -->
+        <div id="gameStatus" class="game-status status-waiting">
+            ⏳ Waiting for round to start... Select a card and click "Join Game"
+        </div>
 
-        <!-- Login Prompt (shown when not logged in) -->
+        <!-- Login Prompt -->
         <div id="loginPrompt" class="login-prompt">
-            <h3>🔒 Please Login to Play</h3>
-            <p>You need to <a href="/login">login</a> or <a href="/register">register</a> to select cards and join games.</p>
+            <h3>🔒 Welcome to Wond Bingo!</h3>
+            <p>Please <a href="/login">login</a> or <a href="/register">register</a> to play.</p>
             <p style="margin-top: 10px;">Demo: <strong>admin</strong> / <strong>admin123</strong></p>
         </div>
 
-        <!-- Game Content (shown when logged in) -->
-        <div id="gameContent" class="game-content">
+        <!-- Game Content -->
+        <div id="gameContent" style="display: none;">
             <h3>Select Card (1-400)</h3>
             <div class="cards-grid" id="cardsGrid"></div>
 
@@ -103,73 +99,45 @@
     </div>
 
     <script>
-        // Telegram Web App initialization
-        let tg = window.Telegram?.WebApp;
-        if (tg) {
-            tg.expand();
-            tg.ready();
-        }
-
-        // Socket.IO connection
         let socket = io();
         let currentUser = localStorage.getItem('userId') || 'user_' + Math.random().toString(36).substr(2, 9);
         localStorage.setItem('userId', currentUser);
         
-        // Game state
         let selectedCard = null;
         let selectedByOthers = new Set();
         let calledNumbers = [];
-        let timer = 20;
         let isLoggedIn = false;
+        let gameRunning = false;
+        let timerSeconds = 20;
+        let currentRound = 1;
 
-        // ============================================
-        // FIXED: Check login status on page load
-        // ============================================
-        function checkLoginStatus() {
+        // Check login status
+        function checkLogin() {
             fetch('/api/balance')
                 .then(response => {
-                    if (response.ok) {
-                        return response.json();
-                    } else {
-                        throw new Error('Not logged in');
-                    }
+                    if (response.ok) return response.json();
+                    throw new Error('Not logged in');
                 })
                 .then(data => {
-                    // User IS logged in
-                    console.log("✅ User is logged in");
                     isLoggedIn = true;
-                    
-                    // Show game content, hide login prompt
                     document.getElementById('loginPrompt').style.display = 'none';
                     document.getElementById('gameContent').style.display = 'block';
-                    
-                    // Update auth links
                     document.getElementById('loginLink').style.display = 'none';
                     document.getElementById('registerLink').style.display = 'none';
                     document.getElementById('profileLink').style.display = 'inline';
                     document.getElementById('logoutLink').style.display = 'inline';
                     
-                    // Check if admin
-                    fetch('/profile')
-                        .then(response => response.text())
-                        .then(html => {
-                            if (html.includes('admin') || html.includes('Admin')) {
-                                document.getElementById('adminLink').style.display = 'inline';
-                            }
-                        });
+                    if (data.username === 'admin') {
+                        document.getElementById('adminLink').style.display = 'inline';
+                    }
                     
-                    showAlert('✅ Logged in successfully!', 'success');
+                    // Request game state
+                    socket.emit('get_state');
                 })
-                .catch(error => {
-                    // User is NOT logged in
-                    console.log("❌ User is not logged in");
+                .catch(() => {
                     isLoggedIn = false;
-                    
-                    // Show login prompt, hide game content
                     document.getElementById('loginPrompt').style.display = 'block';
                     document.getElementById('gameContent').style.display = 'none';
-                    
-                    // Update auth links
                     document.getElementById('loginLink').style.display = 'inline';
                     document.getElementById('registerLink').style.display = 'inline';
                     document.getElementById('profileLink').style.display = 'none';
@@ -178,32 +146,20 @@
                 });
         }
 
-        // Show alert message
-        function showAlert(message, type) {
-            const alert = document.getElementById('alertMessage');
-            alert.className = `alert alert-${type}`;
-            alert.textContent = message;
-            alert.style.display = 'block';
-            setTimeout(() => {
-                alert.style.display = 'none';
-            }, 3000);
-        }
-
-        // Generate cards grid
+        // Generate cards
         for(let i = 1; i <= 400; i++) {
             $('#cardsGrid').append(`<div class="card-number available" id="card-${i}" onclick="selectCard(${i})">${i}</div>`);
         }
 
-        // Socket event handlers
+        // Socket events
         socket.on('connect', function() {
-            console.log('Connected to server');
             socket.emit('identify', { userId: currentUser });
-            checkLoginStatus();
+            checkLogin();
         });
 
         socket.on('card_selected', function(data) {
             if(data.userId !== currentUser) {
-                $(`#card-${data.cardNumber}`).removeClass('selected-by-me available').addClass('selected-by-other');
+                $(`#card-${data.cardNumber}`).removeClass('available selected-by-me').addClass('selected-by-other');
                 selectedByOthers.add(data.cardNumber);
                 updateCardsLeft();
             }
@@ -219,47 +175,62 @@
             calledNumbers.push(data.number);
             $('#calledNumbers').append(`<span class="called-number">${data.number}</span>`);
             markCardNumber(data.number);
+            gameRunning = true;
+            updateGameStatus();
         });
 
         socket.on('game_joined', function(data) {
             renderCard(data.card);
             $('#bingoBtn').prop('disabled', false);
             $('#joinBtn').prop('disabled', true);
-            showAlert('Successfully joined the game!', 'success');
+            alert('✅ Joined game! Game will start when timer reaches 0');
         });
 
         socket.on('claim_result', function(data) {
-            if(data.result === 'VALID') {
-                showAlert('🎉 BINGO! You won!', 'success');
-            } else if(data.result === 'DISQUALIFIED') {
-                showAlert('❌ Invalid claim - Disqualified!', 'danger');
-            } else if(data.result === 'ALREADY_WON') {
-                showAlert('You already claimed this round!', 'success');
-            } else {
-                showAlert('Claim rejected', 'danger');
-            }
+            if(data.result === 'VALID') alert('🎉 BINGO! You won!');
+            else if(data.result === 'DISQUALIFIED') alert('❌ Invalid claim - Disqualified!');
+            else alert('Claim rejected');
         });
 
         socket.on('game_state', function(data) {
-            if(data.card) {
-                renderCard(data.card);
-            }
-            if(data.winners && data.winners.length > 0) {
-                showAlert(`🎉 Winners: ${data.winners.length} player(s)`, 'success');
-            }
-        });
-
-        // Select card function
-        function selectCard(num) {
-            if(!isLoggedIn) {
-                showAlert('Please login first!', 'danger');
-                return;
+            if(data.round) currentRound = data.round;
+            document.getElementById('roundNum').textContent = currentRound;
+            
+            if(data.drawn && data.drawn.length > 0) {
+                calledNumbers = data.drawn;
+                $('#calledNumbers').empty();
+                calledNumbers.forEach(num => {
+                    $('#calledNumbers').append(`<span class="called-number">${num}</span>`);
+                });
+                gameRunning = true;
             }
             
-            if(selectedByOthers.has(num)) {
-                showAlert('This card is already taken!', 'danger');
-                return;
+            if(data.card) {
+                renderCard(data.card);
+                if(data.in_game) {
+                    $('#bingoBtn').prop('disabled', data.disqualified);
+                    $('#joinBtn').prop('disabled', true);
+                }
             }
+            
+            updateGameStatus();
+        });
+
+        socket.on('round_started', function(data) {
+            currentRound = data.round;
+            document.getElementById('roundNum').textContent = currentRound;
+            calledNumbers = [];
+            $('#calledNumbers').empty();
+            gameRunning = true;
+            timerSeconds = 20;
+            updateGameStatus();
+        });
+
+        // Functions
+        function selectCard(num) {
+            if(!isLoggedIn) { alert('Login first!'); window.location.href='/login'; return; }
+            if(gameRunning) { alert('Game already started! Wait for next round.'); return; }
+            if(selectedByOthers.has(num)) { alert('Card taken!'); return; }
             
             if(selectedCard) {
                 $(`#card-${selectedCard}`).removeClass('selected-by-me').addClass('available');
@@ -270,40 +241,22 @@
             selectedCard = num;
             socket.emit('select_card', { cardNumber: num, userId: currentUser });
             updateCardsLeft();
-            showAlert(`Card ${num} selected!`, 'success');
         }
 
-        // Select random card
         function selectRandomCard() {
-            if(!isLoggedIn) {
-                showAlert('Please login first!', 'danger');
-                return;
-            }
+            if(!isLoggedIn) { alert('Login first!'); return; }
+            if(gameRunning) { alert('Game already started!'); return; }
             
             let available = [];
             for(let i=1; i<=400; i++) {
-                if(!selectedByOthers.has(i) && i !== selectedCard) {
-                    available.push(i);
-                }
+                if(!selectedByOthers.has(i) && i !== selectedCard) available.push(i);
             }
-            if(available.length > 0) {
-                selectCard(available[Math.floor(Math.random() * available.length)]);
-            } else {
-                showAlert('No cards available!', 'danger');
-            }
+            if(available.length) selectCard(available[Math.floor(Math.random()*available.length)]);
         }
 
-        // Join game
         function joinGame() {
-            if(!isLoggedIn) {
-                showAlert('Please login first!', 'danger');
-                return;
-            }
-            
-            if(!selectedCard) {
-                showAlert('Select a card first!', 'danger');
-                return;
-            }
+            if(!isLoggedIn) { alert('Login first!'); return; }
+            if(!selectedCard) { alert('Select a card first!'); return; }
             
             $.ajax({
                 url: '/api/join_game',
@@ -315,80 +268,73 @@
                         renderCard(res.card);
                         $('#bingoBtn').prop('disabled', false);
                         $('#joinBtn').prop('disabled', true);
-                        showAlert('Successfully joined game!', 'success');
                     } else {
-                        showAlert(res.message, 'danger');
+                        alert(res.message);
                     }
-                },
-                error: function() {
-                    showAlert('Error joining game', 'danger');
                 }
             });
         }
 
-        // Claim BINGO
         function claimBingo() {
-            if(!isLoggedIn) {
-                showAlert('Please login first!', 'danger');
-                return;
-            }
-            
+            if(!isLoggedIn) { alert('Login first!'); return; }
             if(confirm('Are you sure you have BINGO?')) {
                 socket.emit('claim_bingo');
             }
         }
 
-        // Render card
         function renderCard(card) {
             $('#playerCard').empty();
             for(let row=0; row<5; row++) {
                 for(let col=0; col<5; col++) {
                     let val = card[row][col];
                     let cls = 'bingo-cell';
-                    if(val === 'FREE') {
-                        cls += ' free';
-                    } else {
-                        if(calledNumbers.includes(parseInt(val))) {
-                            cls += ' called';
-                        }
-                    }
+                    if(val === 'FREE') cls += ' free';
+                    else if(calledNumbers.includes(parseInt(val))) cls += ' called';
                     $('#playerCard').append(`<div class="${cls}">${val}</div>`);
                 }
             }
         }
 
-        // Mark number on card
         function markCardNumber(num) {
             $(`#playerCard .bingo-cell:contains(${num})`).addClass('called');
         }
 
-        // Update cards left count
         function updateCardsLeft() {
             let available = 400 - selectedByOthers.size;
             if(selectedCard) available--;
             $('#cardsLeft').text(available);
         }
 
-        // Timer
+        function updateGameStatus() {
+            let statusDiv = document.getElementById('gameStatus');
+            if(gameRunning) {
+                statusDiv.className = 'game-status status-running';
+                statusDiv.innerHTML = '🎲 Game in progress - Numbers being called!';
+            } else {
+                statusDiv.className = 'game-status status-waiting';
+                statusDiv.innerHTML = '⏳ Waiting for next round to start... Select a card and click "Join Game"';
+            }
+        }
+
+        // Timer countdown
         setInterval(() => {
-            if(timer > 0) {
-                timer--;
-                let mins = Math.floor(timer / 60);
-                let secs = timer % 60;
+            if(timerSeconds > 0) {
+                timerSeconds--;
+                let mins = Math.floor(timerSeconds / 60);
+                let secs = timerSeconds % 60;
                 $('#timer').text(`${mins.toString().padStart(2,'0')}:${secs.toString().padStart(2,'0')}`);
             }
         }, 1000);
 
-        // Update player count randomly (for demo)
+        // Auto-start game when timer reaches 0
         setInterval(() => {
-            $('#playerCount').text(Math.floor(Math.random() * 100) + 50);
-            $('#roundNum').text(Math.floor(Math.random() * 5) + 1);
-        }, 5000);
+            if(timerSeconds === 0 && !gameRunning) {
+                gameRunning = true;
+                updateGameStatus();
+            }
+        }, 1000);
 
-        // Check login status on page load and every time page loads
-        $(document).ready(function() {
-            checkLoginStatus();
-        });
+        checkLogin();
     </script>
 </body>
 </html>
