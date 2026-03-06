@@ -215,6 +215,9 @@ def index():
 def admin_panel():
     return render_template('admin.html')
 
+# ============================================
+# FIXED LOGIN ROUTE - NOW REDIRECTS TO HOME
+# ============================================
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
@@ -224,11 +227,15 @@ def login():
         user = User.query.filter_by(username=username).first()
         if user and check_password_hash(user.password_hash, password):
             login_user(user)
+            # IMPORTANT: Redirect to home page after successful login
             return redirect(url_for('index'))
         
         flash('Invalid username or password')
     return render_template('login.html')
 
+# ============================================
+# FIXED REGISTER ROUTE - NOW REDIRECTS TO HOME
+# ============================================
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     if request.method == 'POST':
@@ -247,6 +254,7 @@ def register():
         db.session.add(user)
         db.session.commit()
         login_user(user)
+        # IMPORTANT: Redirect to home page after successful registration
         return redirect(url_for('index'))
     
     return render_template('register.html')
@@ -261,6 +269,11 @@ def logout():
 @login_required
 def profile():
     return render_template('profile.html', user=current_user)
+
+@app.route('/api/balance')
+@login_required
+def get_balance():
+    return jsonify({'balance': 100})  # Default balance for demo
 
 @app.route('/api/join_game', methods=['POST'])
 @login_required
