@@ -6,6 +6,20 @@
     <title>Wond Bingo - የደስታ ቢንጎ</title>
     <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    // Add this at the VERY TOP of your <script> section
+fetch('/api/balance')
+    .then(response => {
+        if (response.ok) {
+            console.log("✅ Logged in successfully!");
+        } else {
+            console.log("❌ Not logged in");
+            alert("Please login first! Click the Login button at top right.");
+            window.location.href = '/login';
+        }
+    })
+    .catch(() => {
+        console.log("❌ Not logged in");
+    });
     <style>
         * {
             margin: 0;
